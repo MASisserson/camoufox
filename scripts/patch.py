@@ -48,8 +48,36 @@ class Patcher:
         version, release = extract_args()
         with temp_cd(find_src_dir('.', version, release)):
             # Reset to unpatched state first (like "Find broken patches")
+            # print("Resetting to unpatched state...")
+            # run('git clean -fdx && ./mach clobber && git reset --hard unpatched', exit_on_fail=False)
+
+            # Reset only when this source dir is itself a git repo with the unpatched tag.
             print("Resetting to unpatched state...")
-            run('git clean -fdx && ./mach clobber && git reset --hard unpatched', exit_on_fail=False)
+
+            repo_root = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).stdout.strip()
+
+            is_repo_root = bool(repo_root) and os.path.abspath(repo_root) == os.getcwd()
+            has_unpatched_tag = (
+                subprocess.run(
+                    ["git", "rev-parse", "-q", "--verify", "refs/tags/unpatched"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                ).returncode == 0
+                if is_repo_root
+                else False
+            )
+
+            if is_repo_root and has_unpatched_tag:
+                run("git reset --hard unpatched")
+                run("./mach clobber", exit_on_fail=False)
+                run("git clean -fdx")
+            else:
+                print("Skipping git reset: no local git repo root with 'unpatched' tag.")
 
             # Re-copy additions and settings after reset
             print("Re-copying additions and settings...")
@@ -192,7 +220,11 @@ def add_rustup(*targets):
 def _update_rustup(target):
     """Add rust targets for the given target"""
     if target == "linux":
-        add_rustup("aarch64-unknown-linux-gnu", "i686-unknown-linux-gnu")
+        add_rustup(
+            "x86_64-unknown-linux-gnu",
+            "aarch64-unknown-linux-gnu",
+            "i686-unknown-linux-gnu",
+        )
     elif target == "windows":
         add_rustup("x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc", "i686-pc-windows-msvc")
     elif target == "macos":

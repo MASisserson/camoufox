@@ -1,8 +1,7 @@
 {
   "assets.json": {
     "content": "internal",
-    "updateAfter": 13,
-    "contentURL": "https://gitlab.com/librewolf-community/browser/source/-/raw/main/assets/uBOAssets.json"
+    "contentURL": "resource://gre/uBOAssets.json"
   },
   "public_suffix_list.dat": {
     "content": "internal",

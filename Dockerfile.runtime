@@ -1,0 +1,22 @@
+FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY dist/*-lin.x86_64.zip /tmp/camoufox.zip
+
+RUN mkdir -p /opt/camoufox \
+    && unzip /tmp/camoufox.zip -d /opt/camoufox \
+    && rm /tmp/camoufox.zip \
+    && chmod +x /opt/camoufox/camoufox \
+               /opt/camoufox/camoufox-bin \
+    && chown -R pwuser:pwuser /opt/camoufox
+
+USER pwuser
+WORKDIR /opt/camoufox
+
+ENTRYPOINT ["./camoufox"]
+CMD ["--headless", "about:blank"]

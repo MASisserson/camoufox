@@ -10,7 +10,11 @@ assets=$(curl https://gitlab.com/librewolf-community/browser/source/-/raw/main/a
 
 # Remove specified filter lists
 echo "-> Removing specified filter lists"
-assets=$(echo "$assets" | jq 'del(.["ublock-badware"], .["urlhaus-1"], .["curben-phishing"])')
+assets=$(echo "$assets" | jq '
+  del(.["ublock-badware"], .["urlhaus-1"], .["curben-phishing"])
+  | .["assets.json"].contentURL = "resource://gre/uBOAssets.json"
+  | del(.["assets.json"].updateAfter)
+')
 
 # Write the resulting json
 echo "-> Writing to assets/uBOAssets.json"

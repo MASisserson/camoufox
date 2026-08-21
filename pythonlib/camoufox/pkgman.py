@@ -37,6 +37,11 @@ from .exceptions import (
     UnsupportedVersion,
 )
 
+GITHUB_API_URL = os.getenv(
+    "CAMOUFOX_GITHUB_API_URL",
+    "https://github.asurint.com/api/v3",
+).rstrip("/")
+
 DownloadBuffer: TypeAlias = Union[BytesIO, tempfile._TemporaryFileWrapper, BufferedWriter]
 
 ARCH_MAP: Dict[str, str] = {
@@ -399,7 +404,7 @@ class GitHubDownloader:
         Fetch releases from a single GitHub repo
         """
         headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
-        api_url = f"https://api.github.com/repos/{github_repo}/releases"
+        api_url = f"{GITHUB_API_URL}/repos/{github_repo}/releases"
         resp = requests.get(api_url, timeout=20, headers=headers)
         resp.raise_for_status()
         return resp.json()
@@ -647,7 +652,7 @@ def list_available_versions(
     last_error = None
     for repo in config.repos:
         try:
-            api_url = f"https://api.github.com/repos/{repo}/releases"
+            api_url = f"{GITHUB_API_URL}/repos/{repo}/releases"
             resp = requests.get(api_url, timeout=20, headers=headers)
             resp.raise_for_status()
             releases = resp.json()

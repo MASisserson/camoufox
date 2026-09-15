@@ -6,6 +6,20 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/*
 
+COPY pythonlib /tmp/camoufox-pythonlib
+COPY third_party/python-wheels/browserforge-1.2.4+asurint.1-py3-none-any.whl \
+     /tmp/python-wheels/browserforge-1.2.4+asurint.1-py3-none-any.whl
+
+ARG BROWSERFORGE_WHEEL_SHA256="5601AC98166736CE0FE03FE324874AE9726E3228D4D5CCCF440A6F1492EA5D20"
+
+RUN echo "${BROWSERFORGE_WHEEL_SHA256}  /tmp/python-wheels/browserforge-1.2.4+asurint.1-py3-none-any.whl" \
+      | sha256sum --check --strict \
+    && python -m pip install --no-cache-dir \
+      /tmp/python-wheels/browserforge-1.2.4+asurint.1-py3-none-any.whl \
+      /tmp/camoufox-pythonlib \
+    && python -m pip check \
+    && rm -rf /tmp/camoufox-pythonlib /tmp/python-wheels
+
 COPY dist/*-lin.x86_64.zip /tmp/camoufox.zip
 
 RUN mkdir -p /opt/camoufox \
@@ -17,6 +31,8 @@ RUN mkdir -p /opt/camoufox \
 
 USER pwuser
 WORKDIR /opt/camoufox
+
+ENV CAMOUFOX_EXECUTABLE_PATH=/opt/camoufox/camoufox
 
 ENTRYPOINT ["./camoufox"]
 CMD ["--headless", "about:blank"]

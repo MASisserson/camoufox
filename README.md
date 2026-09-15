@@ -616,6 +616,102 @@ docker build -t camoufox-builder .
 docker run -v "$(pwd)/dist:/app/dist" camoufox-builder --target <os> --arch <arch>
 ```
 
+### Verified Rust toolchain installation
+
+The Camoufox builder uses Rust to compile Firefox's Rust components. To make
+the build reproducible and prevent execution of an unverified remote installer,
+the Dockerfile pins:
+
+- The `rustup-init` version
+- The approved SHA-256 digest of `rustup-init`
+- The Rust compiler toolchain version
+
+The Dockerfile downloads the specified `rustup-init` executable, verifies its
+SHA-256 digest, and only executes it after verification succeeds. A mismatched
+digest stops the Docker build. The current builder uses Rustup `1.29.0` and
+Rust `1.97.1` for the Linux x86_64 build environment.
+
+Because the approved defaults are stored in the Dockerfile, the standard build
+command remains unchanged:
+
+```bash
+docker build -t camoufox-builder .
+```
+
+#### Updating Rustup
+
+Changes to the Rustup version or digest must be reviewed and approved. Rust
+publishes archived installers and their SHA-256 checksum files at:
+
+```text
+https://static.rust-lang.org/rustup/archive/<rustup-version>/<target>/rustup-init
+https://static.rust-lang.org/rustup/archive/<rustup-version>/<target>/rustup-init.sha256
+```
+
+The target for the Linux x86_64 builder is:
+
+```text
+x86_64-unknown-linux-gnu
+```
+
+On Windows, download the installer and published checksum with PowerShell:
+
+```powershell
+$rustupVersion = "1.29.0"
+$rustupTarget = "x86_64-unknown-linux-gnu"
+
+$rustupUrl = "https://static.rust-lang.org/rustup/archive/$rustupVersion/$rustupTarget/rustup-init"
+$checksumUrl = "$rustupUrl.sha256"
+
+Invoke-WebRequest $rustupUrl -OutFile ".\rustup-init"
+Invoke-WebRequest $checksumUrl -OutFile ".\rustup-init.sha256"
+```
+
+Compare the published checksum with the digest calculated from the downloaded
+file:
+
+```powershell
+$publishedHash = (
+    Get-Content ".\rustup-init.sha256"
+).Trim().Split()[0].ToLowerInvariant()
+
+$calculatedHash = (
+    Get-FileHash ".\rustup-init" -Algorithm SHA256
+).Hash.ToLowerInvariant()
+
+if ($calculatedHash -ne $publishedHash) {
+    throw "Rustup SHA-256 verification failed."
+}
+
+Write-Host "Rustup SHA-256 verified: $calculatedHash"
+```
+
+Before updating the Dockerfile:
+
+1. Record the Rustup version, target, source URL, and calculated SHA-256.
+2. Submit the version and digest through the approved internal review process.
+3. Update `RUSTUP_VERSION` and `RUSTUP_INIT_SHA256` together.
+4. Rebuild the builder image under a temporary candidate tag.
+5. Verify the installed Rustup, Rust, and Cargo versions.
+6. Run a complete Camoufox build before promoting the builder image.
+
+Build and inspect a candidate builder with:
+
+```bash
+docker build -t camoufox-builder:candidate .
+
+docker run --rm \
+  --entrypoint /bin/sh \
+  camoufox-builder:candidate \
+  -lc "rustup --version && rustc --version && cargo --version && rustup show active-toolchain"
+```
+
+The SHA-256 digest is not a secret. It is stored in version control so changes
+are visible and auditable. A checksum obtained from the same external server
+protects against corruption or unexpected file changes, but does not
+independently protect against compromise of that server. Use an approved
+internal artifact mirror when one is available.
+
 <details>
 <summary>
 How can I use my local ~/.mozbuild directory?

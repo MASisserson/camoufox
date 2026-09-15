@@ -723,9 +723,14 @@ def installed_verstr() -> str:
     return Version.from_path(active).full_string
 
 
-def camoufox_path(download_if_missing: bool = True) -> Path:
+def camoufox_path(download_if_missing: bool = False) -> Path:
     """
-    Full path to the active camoufox folder
+    Full path to the active Camoufox folder.
+
+    Browser installation is intentionally explicit: this function never
+    downloads a missing or incompatible browser. The download_if_missing
+    argument is retained for API compatibility but no longer enables network
+    downloads.
     """
     from .multiversion import COMPAT_FLAG, get_active_path
 
@@ -741,29 +746,23 @@ def camoufox_path(download_if_missing: bool = True) -> Path:
         return active
 
     if not os.path.exists(INSTALL_DIR) or not os.listdir(INSTALL_DIR):
-        if not download_if_missing:
-            from .multiversion import load_config, get_default_channel
+        from .multiversion import get_default_channel, load_config
 
-            config = load_config()
-            pinned = config.get("pinned")
-            channel = config.get("channel") or get_default_channel()
-            if pinned:
-                active_display = f"{channel}/{pinned}"
-            else:
-                active_display = channel
-            raise CamoufoxNotInstalled(
-                f"{active_display} is not installed. " f"Please run `camoufox fetch` to install."
-            )
+        config = load_config()
+        pinned = config.get("pinned")
+        channel = config.get("channel") or get_default_channel()
+        active_display = f"{channel}/{pinned}" if pinned else channel
+        raise CamoufoxNotInstalled(
+            f"{active_display} is not installed. " f"Please run `camoufox fetch` to install."
+        )
 
     elif os.path.exists(INSTALL_DIR) and Version.from_path().is_supported():
         return INSTALL_DIR
 
-    else:
-        if not download_if_missing:
-            raise UnsupportedVersion("Camoufox executable is outdated.")
-
-    CamoufoxFetcher().install()
-    return camoufox_path()
+    raise UnsupportedVersion(
+        "The installed Camoufox browser is incompatible. "
+        "Please run `camoufox fetch` explicitly to install a supported version."
+    )
 
 
 def get_path(file: str) -> str:

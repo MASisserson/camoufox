@@ -10,7 +10,9 @@ from typing import Any, List, Optional, Tuple
 
 import rich_click as click
 
-from .addons import DefaultAddons, maybe_download_addons
+# Default addon downloading is disabled for the internal build. Restore this
+# import together with the call at the end of fetch() if it is approved later.
+# from .addons import DefaultAddons, maybe_download_addons
 from .geolocation import (
     ALLOW_GEOIP,
     GEOIP_DIR,
@@ -323,7 +325,9 @@ def fetch(version):
         return
     if ALLOW_GEOIP:
         download_mmdb()
-    maybe_download_addons(list(DefaultAddons))
+    # Do not download uBlock Origin (or other default addons) from external
+    # sources as part of `camoufox fetch`.
+    # maybe_download_addons(list(DefaultAddons))
 
 
 def _set_channel(repo_name: str, channel_type: str):

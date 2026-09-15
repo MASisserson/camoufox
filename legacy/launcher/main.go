@@ -17,7 +17,9 @@ func main() {
 
 	configPath := parseArgs("--config", "{}", &args, true)
 	addons := parseArgs("--addons", "[]", &args, true)
-	excludeAddons := parseArgs("--exclude-addons", "[]", &args, true)
+	// Continue consuming the legacy flag so it is not passed to Firefox.
+	_ = parseArgs("--exclude-addons", "[]", &args, true)
+	// excludeAddons := parseArgs("--exclude-addons", "[]", &args, true)
 	stderrPath := parseArgs("--stderr", "", &args, true)
 
 	//*** PARSE CONFIG ***//
@@ -41,11 +43,11 @@ func main() {
 	// Confirm addon paths are valid
 	confirmPaths(addonsList)
 
-	// Add the default addons, excluding the ones specified in --exclude-addons
-	var excludeAddonsList []string
-	parseJson(excludeAddons, &excludeAddonsList)
-
-	addDefaultAddons(excludeAddonsList, &addonsList)
+	// Default addons (currently only uBlock Origin) are intentionally disabled
+	// for the internal build to prevent automatic external downloads.
+	// var excludeAddonsList []string
+	// parseJson(excludeAddons, &excludeAddonsList)
+	// addDefaultAddons(excludeAddonsList, &addonsList)
 
 	//*** FONTS ***//
 

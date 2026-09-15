@@ -1,5 +1,6 @@
 import os
 import sys
+from configparser import ConfigParser
 from functools import wraps
 from os import environ
 from os.path import abspath
@@ -15,7 +16,11 @@ from screeninfo import get_monitors
 from typing_extensions import TypeAlias
 from ua_parser import user_agent_parser
 
-from .addons import DefaultAddons, add_default_addons, confirm_paths
+from .addons import DefaultAddons, confirm_paths
+# uBlock Origin is disabled for the internal build to prevent automatic
+# downloads of external extension code. Restore this import together with the
+# call in launch_options() below if default addons are approved in the future.
+# from .addons import add_default_addons
 from .exceptions import (
     InvalidOS,
     InvalidPropertyType,
@@ -42,7 +47,7 @@ CACHE_PREFS = {
 }
 
 
-def _generate_fontconfig(fontconfig_path: str) -> str:
+def _generate_fontconfig(fontconfig_path: str, browser_dir: Optional[Path] = None) -> str:
     """
     Generates a runtime fontconfig that resolves bundled font paths absolutely.
     The bundled fonts.conf uses prefix="cwd" relative paths which break when
@@ -52,7 +57,7 @@ def _generate_fontconfig(fontconfig_path: str) -> str:
     """
     import hashlib
 
-    fonts_dir = get_path("fonts")
+    fonts_dir = str(browser_dir / "fonts") if browser_dir else get_path("fonts")
     fonts_conf_src = os.path.join(fontconfig_path, "fonts.conf")
 
     with open(fonts_conf_src, 'r') as f:
@@ -76,7 +81,7 @@ def _generate_fontconfig(fontconfig_path: str) -> str:
 
 
 def get_env_vars(
-    config_map: Dict[str, str], user_agent_os: str
+    config_map: Dict[str, str], user_agent_os: str, browser_dir: Optional[Path] = None
 ) -> Dict[str, Union[str, float, bool]]:
     """
     Gets a dictionary of environment variables for Camoufox.
@@ -113,9 +118,14 @@ def get_env_vars(
         os_dir = directory_map.get(user_agent_os, user_agent_os)
 
         # v150+ uses "fontconfig/" (matching the Go launcher); older bundles shipped "fontconfigs/".
-        fontconfig_path = get_path(os.path.join("fontconfig", os_dir))
+        def browser_resource(*parts: str) -> str:
+            if browser_dir:
+                return str(browser_dir.joinpath(*parts))
+            return get_path(os.path.join(*parts))
+
+        fontconfig_path = browser_resource("fontconfig", os_dir)
         if not os.path.exists(os.path.join(fontconfig_path, "fonts.conf")):
-            fontconfig_path = get_path(os.path.join("fontconfigs", os_dir))
+            fontconfig_path = browser_resource("fontconfigs", os_dir)
 
         # assert that fonts.conf exists in the directory
         if not os.path.exists(os.path.join(fontconfig_path, "fonts.conf")):
@@ -124,7 +134,7 @@ def get_env_vars(
                 f"fonts.conf not found in {fontconfig_path}!  Something ain't right with your camoufox bundle."
             )
 
-        env_vars['FONTCONFIG_FILE'] = _generate_fontconfig(fontconfig_path)
+        env_vars['FONTCONFIG_FILE'] = _generate_fontconfig(fontconfig_path, browser_dir)
 
     return env_vars
 
@@ -159,6 +169,15 @@ def validate_config(config_map: Dict[str, str], path: Optional[Path] = None) -> 
             raise InvalidPropertyType(
                 f"Invalid type for property {key}. Expected {expected_type}, got {type(value).__name__}"
             )
+
+
+def executable_version(executable_path: Path) -> str:
+    """Read the Firefox version bundled beside an explicit executable."""
+    application_ini = executable_path.parent / 'application.ini'
+    metadata = ConfigParser()
+    if not metadata.read(application_ini, encoding='utf-8'):
+        raise FileNotFoundError(f"Browser version information not found at {application_ini}")
+    return metadata['App']['Version']
 
 
 def validate_type(value: Any, expected_type: str) -> bool:
@@ -606,6 +625,12 @@ def launch_options(
     if isinstance(executable_path, str):
         # Convert executable path to a Path object
         executable_path = Path(abspath(executable_path))
+    elif executable_path is None and browser is None:
+        # Container images can provide a preinstalled browser explicitly.
+        # An explicit executable_path or browser selection still takes precedence.
+        bundled_executable = environ.get('CAMOUFOX_EXECUTABLE_PATH')
+        if bundled_executable:
+            executable_path = Path(abspath(bundled_executable))
 
     # Handle virtual display
     if virtual_display:
@@ -635,8 +660,10 @@ def launch_options(
     elif webgl_config:
         raise ValueError('OS must be set when using webgl_config')
 
-    # Add the default addons
-    add_default_addons(addons, exclude_addons)
+    # Default addons (currently only uBlock Origin) are intentionally disabled
+    # for the internal build. Custom local addons supplied through `addons`
+    # remain supported and are validated below.
+    # add_default_addons(addons, exclude_addons)
 
     # Confirm all addon paths are valid
     if addons:
@@ -647,6 +674,8 @@ def launch_options(
     if ff_version:
         ff_version_str = str(ff_version)
         LeakWarning.warn('ff_version', i_know_what_im_doing)
+    elif executable_path:
+        ff_version_str = executable_version(executable_path).split('.', 1)[0]
     else:
         ff_version_str = installed_verstr().split('.', 1)[0]
 
@@ -830,7 +859,11 @@ def launch_options(
 
     # Prepare environment variables to pass to Camoufox
     env_vars = {
-        **get_env_vars(config, target_os),
+        **get_env_vars(
+            config,
+            target_os,
+            executable_path.parent if executable_path else None,
+        ),
         **env,
     }
     # Prepare the executable path

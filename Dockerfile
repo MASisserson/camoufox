@@ -32,7 +32,7 @@ RUN curl --proto '=https' --tlsv1.2 \
       | sha256sum --check --strict \
     && chmod +x /tmp/rustup-init \
     && /tmp/rustup-init \
-      --yes \
+      -y \
       --profile minimal \
       --default-toolchain 1.97.1 \
       --no-modify-path \

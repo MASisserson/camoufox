@@ -7,6 +7,7 @@ default:
 browsers:
   # Fallback to camoufox org
   - repo: SWAT/asurint-camoufox
+    api_url: https://github.asurint.com/api/v3
     name: Official
     pattern: "{name}-{version}-{build}-{os}.{arch}.zip"
     versions:
@@ -20,7 +21,18 @@ browsers:
             max: "1"
           # Prerelease channel (including "alpha.*" builds) matches all versions
 
+  - repo: MASisserson/camoufox
+    api_url: https://api.github.com
+    name: MASisserson
+    pattern: "{name}-{version}-{build}-{os}.{arch}.zip"
+    versions:
+      - python_library:
+          min: "0.5.0"
+          max: "1"
+        # Assume all browsers
+
   - repo: coryking/camoufox
+    api_url: https://api.github.com
     name: CoryKing
     pattern: "{name}-{version}-{build}-{os}.{arch}.zip"
     versions:
@@ -30,6 +42,7 @@ browsers:
         # Assume all browsers
 
   - repo: JWriter20/camoufox
+    api_url: https://api.github.com
     name: JWriter20
     pattern: "{name}-{version}-{build}-{os}.{arch}.zip"
     versions:

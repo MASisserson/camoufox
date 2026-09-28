@@ -37,10 +37,14 @@ from .exceptions import (
     UnsupportedVersion,
 )
 
-GITHUB_API_URL = os.getenv(
-    "CAMOUFOX_GITHUB_API_URL",
-    "https://github.asurint.com/api/v3",
-).rstrip("/")
+# GITHUB_API_URL = os.getenv(
+#     "CAMOUFOX_GITHUB_API_URL",
+#     self.repo_config.api_url,
+# ).rstrip("/")
+
+# BACKUP_API_URL = os.getenv(
+#     "https://api.github.com"
+# )
 
 DownloadBuffer: TypeAlias = Union[BytesIO, tempfile._TemporaryFileWrapper, BufferedWriter]
 
@@ -158,6 +162,7 @@ class RepoConfig:
     """
 
     repos: List[str]  # Primary + fallback GitHub repos
+    api_url: str
     name: str
     pattern: str
     os_map: Dict[str, str]
@@ -180,9 +185,9 @@ class RepoConfig:
         Load repository configurations from repos.yml
         """
         repos_path = LOCAL_DATA / 'repos.yml'
-        with open(repos_path, 'r') as f:
+        with open(repos_path, 'r', encoding='utf-8') as f:
             data = load(f, Loader=CLoader)
-        return [RepoConfig.from_dict(r, spoof_library_version) for r in data.get('browsers', [])]
+        return [RepoConfig.from_dict(browser_info, spoof_library_version) for browser_info in data.get('browsers', [])]
 
     @staticmethod
     def get_default_name() -> str:
@@ -190,7 +195,7 @@ class RepoConfig:
         Get the default repo name from repos.yml
         """
         repos_path = LOCAL_DATA / 'repos.yml'
-        with open(repos_path, 'r') as f:
+        with open(repos_path, 'r', encoding='utf-8') as f:
             data = load(f, Loader=CLoader)
         return data.get('default', {}).get('browser', 'Official')
 
@@ -212,9 +217,11 @@ class RepoConfig:
         # Parse comma separated repos list (primary + fallbacks)
         raw_repo = d['repo']
         repos = [r.strip() for r in raw_repo.split(',')] if isinstance(raw_repo, str) else raw_repo
+        api_url = d['api_url']
 
         return RepoConfig(
             repos=repos,
+            api_url=api_url,
             name=d['name'],
             pattern=d['pattern'],
             os_map=OS_MAP,
@@ -380,10 +387,11 @@ class GitHubDownloader:
     Manages fetching GitHub releases with fallback repos
     """
 
-    def __init__(self, github_repos: Union[str, List[str]]) -> None:
+    def __init__(self, github_repos: Union[str, List[str]], github_api_url: str) -> None:
         if isinstance(github_repos, str):
             github_repos = [github_repos]
         self.github_repos = github_repos
+        self.github_api_url = github_api_url.rstrip("/")
         self.github_repo = github_repos[0]
         self.is_prerelease: bool = False
 
@@ -404,7 +412,7 @@ class GitHubDownloader:
         Fetch releases from a single GitHub repo
         """
         headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
-        api_url = f"{GITHUB_API_URL}/repos/{github_repo}/releases"
+        api_url = f"{self.github_api_url}/repos/{github_repo}/releases"
         resp = requests.get(api_url, timeout=20, headers=headers)
         resp.raise_for_status()
         return resp.json()
@@ -490,7 +498,12 @@ class CamoufoxFetcher(GitHubDownloader):
         selected_version: Optional[AvailableVersion] = None,
     ) -> None:
         self.repo_config = repo_config or RepoConfig.get_default()
-        super().__init__(self.repo_config.repos)
+        github_api_url = os.getenv(
+            "CAMOUFOX_GITHUB_API_URL",
+            self.repo_config.api_url,
+        )
+
+        super().__init__(self.repo_config.repos, github_api_url)
 
         self.arch = self.get_platform_arch()
         self._version_obj: Optional[Version] = None
@@ -652,7 +665,7 @@ def list_available_versions(
     last_error = None
     for repo in config.repos:
         try:
-            api_url = f"{GITHUB_API_URL}/repos/{repo}/releases"
+            api_url = f"{self.repo_config.api_url}/repos/{repo}/releases"
             resp = requests.get(api_url, timeout=20, headers=headers)
             resp.raise_for_status()
             releases = resp.json()

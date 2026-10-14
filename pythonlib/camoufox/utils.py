@@ -1059,7 +1059,7 @@ def launch_options(
     # Default addons (currently only uBlock Origin) are intentionally disabled
     # for the internal build. Custom local addons supplied through `addons`
     # remain supported and are validated below.
-    # add_default_addons(addons, exclude_addons)
+    add_default_addons(addons, exclude_addons)
 
     # Confirm all addon paths are valid
     if addons:

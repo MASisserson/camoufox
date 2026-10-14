@@ -12,7 +12,7 @@ import rich_click as click
 
 # Default addon downloading is disabled for the internal build. Restore this
 # import together with the call at the end of fetch() if it is approved later.
-# from .addons import DefaultAddons, maybe_download_addons
+from .addons import DefaultAddons, maybe_download_addons
 from .fpgen_model import ensure_fpgen_model
 from .geolocation import (
     ALLOW_GEOIP,
@@ -343,9 +343,9 @@ def fetch(version):
         return
     if ALLOW_GEOIP:
         download_mmdb()
-    # Do not download uBlock Origin (or other default addons) from external
+    # Do download uBlock Origin (or other default addons) from external
     # sources as part of `camoufox fetch`.
-    # maybe_download_addons(list(DefaultAddons))
+    maybe_download_addons(list(DefaultAddons))
     ensure_fpgen_model()
 
 

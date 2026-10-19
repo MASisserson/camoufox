@@ -81,7 +81,9 @@
 Processing tens of billions of requests per month for thousands of customers, Byteful powers browser-based AI agents, automation systems, and data workflows. It is a member of the Internet Watch Foundation and the Ethical Web Data Collection Initiative.
 
 Get 10% off Byteful Residential Bandwidth with the code: CAMOUFOX10
-    </td>
+
+</td>
+
   </tr>
   <tr>
     <td width="25%" align="center" valign="middle">
@@ -102,7 +104,7 @@ Get 10% off Byteful Residential Bandwidth with the code: CAMOUFOX10
 </table>
 
 ## Tools & Services
-  
+
 <table>
   <tr>
     <td width="25%" align="center" valign="middle">
@@ -145,7 +147,9 @@ Get 10% off Byteful Residential Bandwidth with the code: CAMOUFOX10
       <a href="https://crawlbase.com/?utm_source=github&utm_medium=sponsorship&utm_campaign=camoufox">Crawlbase</a> gives developers and AI teams reliable data at scale: a 99% success-rate Crawler, Crawling API, Smart AI Proxies, and Web MCP Server that get through, so your scrapers and agents don't break. You build, we handle the infrastructure.
 
 <strong>Get 15% off your first 3 months with code CAMOUFOX</strong> → <a href="https://crawlbase.com/?utm_source=github&utm_medium=sponsorship&utm_campaign=camoufox">crawlbase.com</a>
-    </td>
+
+</td>
+
   </tr>
   <tr>
     <td width="25%" align="center" valign="middle">
@@ -336,34 +340,34 @@ Camoufox is a Firefox fork engineered for web scraping and AI agents. It is head
 
 ## Highlights
 
-* **Built for AI agents** 🤖
-  * Minimal, debloated Firefox - fast to launch, cheap to run
-  * Drop-in Playwright compatibility from Python and JavaScript/TypeScript
-  * Invisible to anti-bot systems so you can run your agent cluster locally or in the cloud without being flagged
+- **Built for AI agents** 🤖
+  - Minimal, debloated Firefox - fast to launch, cheap to run
+  - Drop-in Playwright compatibility from Python and JavaScript/TypeScript
+  - Invisible to anti-bot systems so you can run your agent cluster locally or in the cloud without being flagged
 
-- **Undetectable by design** 🎭
+* **Undetectable by design** 🎭
   - Page automation hidden from JavaScript inspection. See the [stealth page](https://camoufox.com/stealth) for more details.
 
-* **Fingerprint injection & rotation (without JS injection!)**
-  * All navigator properties (device, OS, hardware, browser, etc.) ✅
-  * Screen size, resolution, window, & viewport properties ✅
-  * Geolocation, timezone, locale, & Intl spoofing ✅
-  * WebRTC IP spoofing at the protocol level ✅
-  * Voices, speech playback rate, etc. ✅
-  * And much, much more!
+- **Fingerprint injection & rotation (without JS injection!)**
+  - All navigator properties (device, OS, hardware, browser, etc.) ✅
+  - Screen size, resolution, window, & viewport properties ✅
+  - Geolocation, timezone, locale, & Intl spoofing ✅
+  - WebRTC IP spoofing at the protocol level ✅
+  - Voices, speech playback rate, etc. ✅
+  - And much, much more!
 
-- **Anti Graphical fingerprinting**
+* **Anti Graphical fingerprinting**
   - WebGL parameters, supported extensions, context attributes, & shader precision formats ✅
   - Font spoofing & anti-fingerprinting ✅
 
-* **Optimized for automation**
-  * Human-like mouse movement 🖱️
-  * Blocks & circumvents ads 🛡️
-  * Optional instant animations (`instantAnimations`), so Playwright never waits on one 💨
+- **Optimized for automation**
+  - Human-like mouse movement 🖱️
+  - Blocks & circumvents ads 🛡️
+  - Optional instant animations (`instantAnimations`), so Playwright never waits on one 💨
 
-- Debloated & optimized for memory efficiency ⚡
-- [PyPI](https://pypi.org/project/camoufox/) and npm packages for updates & auto fingerprint injection 📦
-- Stays up to date with the latest Firefox version 🕓
+* Debloated & optimized for memory efficiency ⚡
+* [PyPI](https://pypi.org/project/camoufox/) and npm packages for updates & auto fingerprint injection 📦
+* Stays up to date with the latest Firefox version 🕓
 
 ---
 
@@ -690,6 +694,52 @@ docker build -t camoufox-builder .
 docker run -v "$(pwd)/dist:/app/dist" camoufox-builder --target <os> --arch <arch>
 ```
 
+### Running Camoufox in Docker
+
+Camoufox can be run in a docker container.
+
+1. Build the Camoufox runtime environment:
+
+```bash
+docker build `
+  -f Dockerfile.runtime `
+  --build-arg CAMOUFOX_ZIP=dist/<camoufox_build_zip> `
+  -t camoufox-runtime:<camoufox_build_id> .
+```
+
+For example:
+
+```bash
+docker build `
+  -f Dockerfile.runtime `
+  --build-arg CAMOUFOX_ZIP=dist/camoufox-156.0.1-beta.32-lin.x86_64.zip `
+  -t camoufox-runtime:beta.32 .
+```
+
+2. Run the the container with the python script used for scraping:
+
+```bash
+docker run --rm `
+  --name camoufox-sannysoft `
+  -e DISPLAY=host.docker.internal:0.0 `
+  -v "${PWD}\test_sannysoft.py:/app/test_sannysoft.py:ro" `
+  --entrypoint python `
+  camoufox-runtime:<camoufox_build_id> `
+  /app/<python_script>
+```
+
+For example:
+
+```bash
+docker run --rm `
+  --name camoufox-sannysoft `
+  -e DISPLAY=host.docker.internal:0.0 `
+  -v "${PWD}\test_sannysoft.py:/app/test_sannysoft.py:ro" `
+  --entrypoint python `
+  camoufox-runtime:beta.32 `
+  /app/test_sannysoft.py
+```
+
 ### Verified Rust toolchain installation
 
 The Camoufox builder uses Rust to compile Firefox's Rust components. To make
@@ -884,14 +934,14 @@ flowchart TD
 
 #### Cited Commands
 
-| #   | Command                                       | Description                                                                                                 |
-| --- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| (1) | `make ff-dbg`                                 | Setup vanilla Firefox with minimal patches.                                                                 |
-| (2) | `make build`                                  | Build the source code.                                                                                      |
-| (3) | `make run`                                    | Runs the built browser.                                                                                     |
-| (4) | `make run args="--headless https://test.com"` | Run a URL in headless mode. All redirects will be printed to the console to determine if the test passed.   |
-| (5) | `make patch ./patches/<name>.patch`           | Apply one patch. `make unpatch` reverses it.                                                                |
-| (6) | `make edit-cfg`                               | Edit camoufox.cfg in the default system editor.                                                             |
+| #   | Command                                       | Description                                                                                               |
+| --- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| (1) | `make ff-dbg`                                 | Setup vanilla Firefox with minimal patches.                                                               |
+| (2) | `make build`                                  | Build the source code.                                                                                    |
+| (3) | `make run`                                    | Runs the built browser.                                                                                   |
+| (4) | `make run args="--headless https://test.com"` | Run a URL in headless mode. All redirects will be printed to the console to determine if the test passed. |
+| (5) | `make patch ./patches/<name>.patch`           | Apply one patch. `make unpatch` reverses it.                                                              |
+| (6) | `make edit-cfg`                               | Edit camoufox.cfg in the default system editor.                                                           |
 
 </details>
 

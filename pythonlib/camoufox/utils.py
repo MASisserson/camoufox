@@ -16,7 +16,7 @@ import orjson
 from typing_extensions import TypeAlias
 from ua_parser import user_agent_parser
 
-from .addons import DefaultAddons, confirm_paths
+from .addons import DefaultAddons, add_default_addons, confirm_paths
 from .display import has_display, largest_display
 from .exceptions import (
     InvalidOS,

@@ -18,7 +18,6 @@
 /firefox-*
 /mozilla-unified
 /windows-build
-dist/
 bin/
 launch
 launch.exe

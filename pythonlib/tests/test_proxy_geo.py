@@ -30,7 +30,7 @@ class _Response:
         return self._payload
 
 
-EXIT = {"status": "success", "query": "203.0.113.7", "timezone": "Europe/Paris"}
+EXIT = {"status": "success", "ip": "203.0.113.7", "timezone": "Europe/Paris"}
 
 
 def _sync_browser():

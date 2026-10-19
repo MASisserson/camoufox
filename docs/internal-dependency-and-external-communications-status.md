@@ -1,6 +1,7 @@
 # Camoufox Internalization and External Dependency Status
 
-**Status date:** 2026-08-26  
+**Status date:** 2026-10-19
+
 **Scope:** Current Camoufox working tree, Linux x86_64 browser artifact, Python application image, third-party Python dependencies, and runtime external communications.
 
 ## Purpose
@@ -293,13 +294,54 @@ Recommended decision:
 
 ### Proxy IP and timezone lookup
 
-The synchronous and asynchronous APIs contain proxy helper paths that query:
+The Python `NewContext()` and `AsyncNewContext()` helpers query the following
+HTTPS endpoint when a proxy is configured and either `webrtc_ip` or
+`timezone_id` was not supplied explicitly:
 
 ```text
-http://ip-api.com/json?fields=query,timezone
+https://ipinfo.io/json
 ```
 
-This endpoint uses plain HTTP in the current code. It should be disabled, replaced with an internal service, or changed to an approved authenticated HTTPS service before the helper is approved.
+The request is sent through the configured proxy. IPinfo therefore receives the
+proxy exit IP, ordinary HTTPS request metadata, and connection metadata. Camoufox
+uses only the returned `ip` and IANA `timezone` fields. The exit IP is validated
+before use. A lookup failure aborts context creation instead of silently retaining
+the host's WebRTC IP or timezone.
+
+Supplying only `timezone_id` does not disable the lookup: Camoufox still obtains
+the exit IP and preserves the caller's timezone. Supplying only `webrtc_ip` also
+performs the lookup to obtain the timezone. The lookup is skipped only when both
+values are supplied.
+
+The current endpoint is IPinfo's unauthenticated legacy API. IPinfo documents a
+shared limit of 1,000 requests per day per source IP and states that the legacy
+service may eventually be discontinued. Containers sharing an egress address may
+therefore encounter rate limits together. See [IPinfo's unauthenticated API
+description](https://support.ipinfo.io/hc/en-us/articles/30792479436562-What-Is-the-Difference-Between-Using-the-Authenticated-Free-Plan-and-the-Public-API-With-No-Account)
+and [response-field documentation](https://ipinfo.io/developers/ip-geolocation-api-data).
+
+Recommended decision:
+
+- Supply both `webrtc_ip` and `timezone_id` from an approved application source,
+  or
+- Replace the unauthenticated public endpoint with an approved internal service.
+
+### Python browser-server proxy behavior
+
+`launch_server(proxy=..., geoip=True)` follows a different path from the Python
+context helpers. It discovers the public IP through the configured proxy using
+the public-IP provider list above, then passes that IP to `get_geolocation()` to
+derive WebRTC, timezone, locale, and geolocation configuration before starting
+the browser server. `launch_server(proxy=...)` without `geoip=True` performs no
+lookup and emits a proxy-without-geolocation leak warning.
+
+A JavaScript client connected through Playwright's WebSocket protocol calls
+Playwright's `browser.newContext()` directly. That call does not execute
+Camoufox's Python `NewContext()` or `AsyncNewContext()` wrappers, so a proxy added
+only by the JavaScript client does not trigger the IPinfo lookup. For the current
+one-server-per-scrape architecture, configure the proxy and `geoip=True` in the
+Python server-launch application, or have the application supply the WebRTC IP
+and timezone explicitly.
 
 ### GeoIP database downloads
 
@@ -361,7 +403,9 @@ The Rustup executable is versioned and checksum-verified. The later Rust toolcha
 2. **Public PyPI remains required.** The application image cannot yet build with `--no-index`.
 3. **BrowserForge data remains external.** `apify-fingerprint-datapoints` must be reviewed and internalized.
 4. **Optional geolocation communicates externally.** Public IP, timezone, and database endpoints need an explicit policy decision.
-5. **Plain HTTP remains in proxy lookup.** `ip-api.com` traffic is not protected by TLS.
+5. **The proxy lookup depends on IPinfo's legacy public API.** It uses HTTPS, but
+   remains externally controlled, shared-rate-limited, and potentially subject
+   to discontinuation.
 6. **The pinned-Rust Dockerfile is not fully validated.** A clean builder image and full browser build are still required.
 7. **The BrowserForge candidate is not promoted.** The current `latest` tag may still refer to the earlier application image.
 8. **No formal SCA/SBOM evidence has been produced.** Package and container scans remain required.
@@ -386,7 +430,8 @@ The Rustup executable is versioned and checksum-verified. The later Rust toolcha
 1. Determine whether automatic geolocation is a required business feature.
 2. If not required, disable automatic public-IP and GeoIP downloads.
 3. If required, define one approved internal HTTPS endpoint and one approved database source.
-4. Remove the plain-HTTP `ip-api.com` path.
+4. Replace the unauthenticated IPinfo lookup with an approved internal service,
+   or require callers to supply both the exit IP and timezone.
 5. Test runtime network behavior with egress logging enabled.
 
 ### Priority 3: validate and promote the controlled build
@@ -418,4 +463,4 @@ For each approved release, retain:
 
 ## Status conclusion
 
-The current candidate demonstrates that Camoufox can launch using an internally versioned and verified BrowserForge wheel without fetching BrowserForge from Daijro at build time. The primary remaining dependency-control problem is the public PyPI transitive dependency graph, beginning with `apify-fingerprint-datapoints`. The primary remaining callback problem is optional geolocation behavior, particularly public-IP services, the plain-HTTP `ip-api.com` helper, and externally hosted GeoIP databases.
+The current candidate demonstrates that Camoufox can launch using an internally versioned and verified BrowserForge wheel without fetching BrowserForge from Daijro at build time. The primary remaining dependency-control problem is the public PyPI transitive dependency graph, beginning with `apify-fingerprint-datapoints`. The primary remaining callback problem is optional geolocation behavior, particularly public-IP services, the unauthenticated IPinfo proxy helper, and externally hosted GeoIP databases.

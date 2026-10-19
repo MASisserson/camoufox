@@ -86,7 +86,7 @@ def proxy_exit_geo(proxy: str) -> Tuple[str, str]:
     """
     try:
         resp = requests.get(
-            "http://ip-api.com/json?fields=status,message,query,timezone",
+            "https://ipinfo.io/json",
             proxies=Proxy.as_requests_proxy(proxy),
             timeout=10,
         )
@@ -94,10 +94,12 @@ def proxy_exit_geo(proxy: str) -> Tuple[str, str]:
         data = resp.json()
     except requests.RequestException as exception:
         raise InvalidIP(f"{PROXY_LOOKUP_FAILED}: {exception}") from exception
-    if data.get("status") != "success" or not data.get("timezone"):
-        raise InvalidIP(f"{PROXY_LOOKUP_FAILED}: {data.get('message') or data}")
-    validate_ip(data["query"])
-    return data["query"], data["timezone"]
+    if not isinstance(data["ip"], str) or not isinstance(data["timezone"], str):
+        raise InvalidIP(
+            f"{PROXY_LOOKUP_FAILED}: {data.get('message') or data}"
+        )
+    validate_ip(data["ip"])
+    return data["ip"], data["timezone"]
 
 
 PROXY_LOOKUP_FAILED = (

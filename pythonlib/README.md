@@ -33,6 +33,10 @@ The `geoip` parameter is optional, but heavily recommended if you are using prox
 
 The dataset is [GeoIP All-in-One](https://github.com/daijro/geoip-all-in-one), which merges several IP databases and is rebuilt weekly. Camoufox fetches the newest build and refreshes it once it is a week old.
 
+This local Python version always uses American English (`en-US`) for automatic
+country-based locale selection, including GeoIP. Location and timezone still
+come from the IP lookup. An explicit `locale=` overrides this default.
+
 Next, download the Camoufox browser:
 
 ```bash

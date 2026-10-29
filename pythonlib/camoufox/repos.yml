@@ -1,6 +1,6 @@
 # Default configurations
 default:
-  browser: Official
+  browser: MASisserson
   geoip: GeoIP AIO by daijro
 
 # Browser repositories

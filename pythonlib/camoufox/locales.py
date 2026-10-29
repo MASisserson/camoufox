@@ -264,12 +264,9 @@ class StatisticalLocaleSelector:
 
     def from_region(self, region: str) -> Locale:
         """
-        Get a random locale based on the territory ISO code.
-        Returns as a Locale object.
+        Use American English regardless of the territory ISO code.
         """
-        languages, probabilities = self._load_territory_data(region)
-        language = np.random.choice(languages, p=probabilities).replace('_', '-')
-        return normalize_locale(f"{language}-{region}")
+        return normalize_locale("en-US")
 
     def from_language(self, language: str) -> Locale:
         """
